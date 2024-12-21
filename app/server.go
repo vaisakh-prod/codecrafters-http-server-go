@@ -23,6 +23,7 @@ func main() {
 	}
 	req := make([]byte, 1024)
 	conn.Read(req)
+	fmt.Print(string(req))
 	lines := strings.Split(string(req), "\r\n")
 	path_str := strings.Split(lines[0], " ")[1]
 	if path_str == "/" {
