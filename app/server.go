@@ -25,15 +25,24 @@ func main() {
 	conn.Read(req)
 	fmt.Print(string(req))
 	lines := strings.Split(string(req), "\r\n")
-	path_str := strings.Split(lines[0], " ")[1]
-	if path_str == "/" {
+	var path string
+	items := []string{}
+	for _, line := range lines {
+		if strings.Contains(line, "GET") {
+			path = strings.Split(line, " ")[1]
+		} else if strings.Contains(line, "User-Agent") {
+			items = strings.Split(line, ": ")
+		}
+	}
+	if path == "/" {
 		msg = "HTTP/1.1 200 OK\r\n\r\n"
-	} else if strings.HasPrefix(path_str, "/echo/") {
-		keyword := strings.Split(path_str, "/echo/")[1]
+	} else if strings.HasPrefix(path, "/echo/") {
+		keyword := strings.Split(path, "/echo/")[1]
 		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(keyword), keyword)
-	} else if strings.HasPrefix(path_str, "/user-agent") && len(lines) > 4 {
-		items := strings.Split(lines[3], ": ")
-		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(items[1]), items[1])
+	} else if strings.HasPrefix(path, "/user-agent") && len(items) > 4 {
+		if len(items) > 0 {
+			msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(items[1]), items[1])
+		}
 	}
 	conn.Write([]byte(msg))
 }
