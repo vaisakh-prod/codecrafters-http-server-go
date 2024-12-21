@@ -39,10 +39,8 @@ func main() {
 	} else if strings.HasPrefix(path, "/echo/") {
 		keyword := strings.Split(path, "/echo/")[1]
 		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(keyword), keyword)
-	} else if strings.HasPrefix(path, "/user-agent") && len(items) > 4 {
-		if len(items) > 0 {
-			msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(items[1]), items[1])
-		}
+	} else if strings.HasPrefix(path, "/user-agent") && len(items) > 0 {
+		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(items[1]), items[1])
 	}
 	conn.Write([]byte(msg))
 }
