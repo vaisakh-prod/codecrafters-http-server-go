@@ -23,12 +23,16 @@ func main() {
 	}
 	req := make([]byte, 1024)
 	conn.Read(req)
-	path_str := strings.Split(string(req), " ")[1]
+	lines := strings.Split(string(req), "\r\n")
+	path_str := strings.Split(lines[0], " ")[1]
 	if path_str == "/" {
 		msg = "HTTP/1.1 200 OK\r\n\r\n"
 	} else if strings.HasPrefix(path_str, "/echo/") {
 		keyword := strings.Split(path_str, "/echo/")[1]
 		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(keyword), keyword)
+	} else if strings.HasPrefix(path_str, "/user-agent") && len(lines) > 4 {
+		items := strings.Split(lines[3], ": ")
+		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(items[1]), items[1])
 	}
 	conn.Write([]byte(msg))
 }
