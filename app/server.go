@@ -31,10 +31,10 @@ func main() {
 func handleConnection(conn net.Conn) {
 	msg := "HTTP/1.1 404 Not Found\r\n\r\n"
 	req := make([]byte, 1024)
-	lines := strings.Split(string(req), "\r\n")
+
 	conn.Read(req)
 
-	fmt.Print(string(req))
+	lines := strings.Split(string(req), "\r\n")
 
 	defer conn.Close()
 
