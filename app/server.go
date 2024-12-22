@@ -1,14 +1,20 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
+var cmdLine = flag.String("directory", "", "Specify the folder in which files are to be handled")
+
 func main() {
 	fmt.Println("Logs from your program will appear here!")
+	flag.Parse()
+
 	// Uncomment this block to pass the first stage
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
@@ -23,12 +29,12 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			continue
 		}
-		go handleConnection(conn)
+		go handleConnection(conn, cmdLine)
 	}
 
 }
 
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, Directory *string) {
 	msg := "HTTP/1.1 404 Not Found\r\n\r\n"
 	req := make([]byte, 1024)
 
@@ -49,7 +55,7 @@ func handleConnection(conn net.Conn) {
 		}
 	}
 
-	fmt.Print(path)
+	fmt.Println(path)
 
 	if path == "/" {
 		msg = "HTTP/1.1 200 OK\r\n\r\n"
@@ -58,6 +64,19 @@ func handleConnection(conn net.Conn) {
 		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(keyword), keyword)
 	} else if strings.HasPrefix(path, "/user-agent") && len(items) > 0 {
 		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(items[1]), items[1])
+	} else if strings.HasPrefix(path, "/files/") {
+		fileName := strings.Split(path, "/files/")[1]
+		if *Directory != "" && fileName != "" {
+			absolutePath := filepath.Join(*Directory, fileName)
+			fileData, err := os.ReadFile(absolutePath)
+			if err != nil {
+				fmt.Print(err)
+			}
+			if err == nil {
+				file := string(fileData)
+				msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%v", len(file), file)
+			}
+		}
 	}
 
 	conn.Write([]byte(msg))
