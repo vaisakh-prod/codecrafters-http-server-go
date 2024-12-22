@@ -48,7 +48,10 @@ func handleConnection(conn net.Conn) {
 			items = strings.Split(line, ": ")
 		}
 	}
-	if path == "" {
+
+	fmt.Print(path)
+
+	if path == "/" {
 		msg = "HTTP/1.1 200 OK\r\n\r\n"
 	} else if strings.HasPrefix(path, "/echo/") {
 		keyword := strings.Split(path, "/echo/")[1]
