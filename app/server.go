@@ -51,11 +51,13 @@ func handleConnection(conn net.Conn, Directory *string) {
 	for _, line := range lines {
 		if strings.Contains(line, "GET") || strings.Contains(line, "POST") {
 			path = strings.Split(line, " ")[1]
+
 		} else if strings.Contains(line, "User-Agent") {
 			items = strings.Split(line, ": ")
 		}
 	}
-	fmt.Println(lines[0])
+	fmt.Println(path)
+
 	if strings.Contains(lines[0], "GET") {
 		fmt.Println(path)
 		if path == "/" {
@@ -78,6 +80,23 @@ func handleConnection(conn net.Conn, Directory *string) {
 				if err == nil {
 					file := string(fileData)
 					msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%v", len(file), file)
+				}
+			} else {
+				panic("Directory or fileName is None")
+			}
+		}
+	} else if strings.Contains(lines[0], "POST") {
+		data := lines[len(lines)-1]
+		if strings.HasPrefix(path, "/files/") {
+			fileName := strings.Split(path, "/files/")[1]
+			if *Directory != "" && fileName != "" {
+				absolutePath := filepath.Join(*Directory, fileName)
+
+				err := os.WriteFile(absolutePath, []byte(data), 0777)
+				if err != nil {
+					fmt.Print(err)
+				} else {
+					msg = "HTTP/1.1 201 Created\r\n\r\n"
 				}
 			} else {
 				panic("Directory or fileName is None")
