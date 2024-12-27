@@ -47,37 +47,42 @@ func handleConnection(conn net.Conn, Directory *string) {
 	var path string
 	items := []string{}
 
+	fmt.Println(lines)
 	for _, line := range lines {
-		if strings.Contains(line, "GET") {
+		if strings.Contains(line, "GET") || strings.Contains(line, "POST") {
 			path = strings.Split(line, " ")[1]
 		} else if strings.Contains(line, "User-Agent") {
 			items = strings.Split(line, ": ")
 		}
 	}
+	fmt.Println(lines[0])
+	if strings.Contains(lines[0], "GET") {
+		fmt.Println(path)
+		if path == "/" {
+			msg = "HTTP/1.1 200 OK\r\n\r\n"
+		} else if strings.HasPrefix(path, "/echo/") {
+			keyword := strings.Split(path, "/echo/")[1]
+			msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(keyword), keyword)
+		} else if strings.HasPrefix(path, "/user-agent") && len(items) > 0 {
+			msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(items[1]), items[1])
+		} else if strings.HasPrefix(path, "/files/") {
+			fileName := strings.Split(path, "/files/")[1]
+			if *Directory != "" && fileName != "" {
+				absolutePath := filepath.Join(*Directory, fileName)
 
-	fmt.Println(path)
-
-	if path == "/" {
-		msg = "HTTP/1.1 200 OK\r\n\r\n"
-	} else if strings.HasPrefix(path, "/echo/") {
-		keyword := strings.Split(path, "/echo/")[1]
-		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(keyword), keyword)
-	} else if strings.HasPrefix(path, "/user-agent") && len(items) > 0 {
-		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(items[1]), items[1])
-	} else if strings.HasPrefix(path, "/files/") {
-		fileName := strings.Split(path, "/files/")[1]
-		if *Directory != "" && fileName != "" {
-			absolutePath := filepath.Join(*Directory, fileName)
-			fileData, err := os.ReadFile(absolutePath)
-			if err != nil {
-				fmt.Print(err)
-			}
-			if err == nil {
-				file := string(fileData)
-				msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%v", len(file), file)
+				fileData, err := os.ReadFile(absolutePath)
+				//fmt.Println(absolutePath, fileData)
+				if err != nil {
+					fmt.Print(err)
+				}
+				if err == nil {
+					file := string(fileData)
+					msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%v", len(file), file)
+				}
+			} else {
+				panic("Directory or fileName is None")
 			}
 		}
 	}
-
 	conn.Write([]byte(msg))
 }
