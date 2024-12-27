@@ -38,16 +38,16 @@ func handleConnection(conn net.Conn, Directory *string) {
 	msg := "HTTP/1.1 404 Not Found\r\n\r\n"
 	req := make([]byte, 1024)
 
-	conn.Read(req)
+	n, _ := conn.Read(req)
 
+	req = req[:n]
 	lines := strings.Split(string(req), "\r\n")
-
 	defer conn.Close()
 
 	var path string
 	items := []string{}
 
-	fmt.Println(lines)
+	fmt.Println(lines, len(req))
 	for _, line := range lines {
 		if strings.Contains(line, "GET") || strings.Contains(line, "POST") {
 			path = strings.Split(line, " ")[1]
@@ -86,13 +86,13 @@ func handleConnection(conn net.Conn, Directory *string) {
 			}
 		}
 	} else if strings.Contains(lines[0], "POST") {
-		data := lines[len(lines)-1]
+		data := []byte(lines[len(lines)-1])
+		fmt.Println(len(data))
 		if strings.HasPrefix(path, "/files/") {
 			fileName := strings.Split(path, "/files/")[1]
 			if *Directory != "" && fileName != "" {
 				absolutePath := filepath.Join(*Directory, fileName)
-
-				err := os.WriteFile(absolutePath, []byte(data), 0777)
+				err := os.WriteFile(absolutePath, data, 0644)
 				if err != nil {
 					fmt.Print(err)
 				} else {
