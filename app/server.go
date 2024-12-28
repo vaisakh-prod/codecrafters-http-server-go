@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"compress/gzip"
 	"flag"
 	"fmt"
 	"net"
@@ -66,36 +64,6 @@ func handleConnection(conn net.Conn, directory *string) {
 	}
 }
 
-func parseRequest(lines []string) (string, string, []string) {
-	var path, userAgent string
-	encodingFormats := []string{}
-	for _, line := range lines {
-		if strings.HasPrefix(line, "GET") || strings.HasPrefix(line, "POST") {
-			path = strings.Fields(line)[1]
-		} else if strings.HasPrefix(line, "User-Agent") {
-			userAgent = strings.SplitN(line, ": ", 2)[1]
-		} else if strings.HasPrefix(line, "Accept-Encoding") {
-
-			encodingFormat := strings.SplitN(line, ": ", 2)[1]
-			encodingFormats = strings.Split(encodingFormat, ", ")
-		}
-	}
-	return path, userAgent, encodingFormats
-}
-
-func gzipAndEncode(data string) (string, error) {
-	var b bytes.Buffer
-	gz := gzip.NewWriter(&b)
-	_, err := gz.Write([]byte(data))
-	if err != nil {
-		return "", err
-	}
-	if err := gz.Close(); err != nil {
-		return "", err
-	}
-	return b.String(), nil
-}
-
 func handleEcho(conn net.Conn, path string, encodingFormats []string) {
 	keyword := strings.TrimPrefix(path, "/echo/")
 	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(keyword), keyword)
@@ -151,12 +119,5 @@ func handleDefault(conn net.Conn, path string) {
 		sendResponse(conn, "HTTP/1.1 200 OK\r\n\r\n")
 	} else {
 		sendResponse(conn, "HTTP/1.1 404 Not Found\r\n\r\n")
-	}
-}
-
-func sendResponse(conn net.Conn, msg string) {
-	_, err := conn.Write([]byte(msg))
-	if err != nil {
-		fmt.Printf("Failed to send response: %v\n", err)
 	}
 }
