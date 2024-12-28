@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"net"
@@ -94,7 +93,7 @@ func gzipAndEncode(data string) (string, error) {
 	if err := gz.Close(); err != nil {
 		return "", err
 	}
-	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
+	return b.String(), nil
 }
 
 func handleEcho(conn net.Conn, path string, encodingFormats []string) {
