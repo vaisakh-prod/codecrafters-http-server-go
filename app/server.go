@@ -49,7 +49,7 @@ func handleConnection(conn net.Conn, directory *string) {
 	req = req[:n]
 	lines := strings.Split(string(req), "\r\n")
 
-	path, userAgent, encodingFormat := parseRequest(lines)
+	path, userAgent, encodingFormats := parseRequest(lines)
 	if path == "" {
 		sendResponse(conn, "HTTP/1.1 400 Bad Request\r\n\r\n")
 		return
@@ -57,7 +57,7 @@ func handleConnection(conn net.Conn, directory *string) {
 
 	switch {
 	case strings.HasPrefix(path, "/echo/"):
-		handleEcho(conn, path, encodingFormat)
+		handleEcho(conn, path, encodingFormats)
 	case strings.HasPrefix(path, "/user-agent"):
 		handleUserAgent(conn, userAgent)
 	case strings.HasPrefix(path, "/files/"):
@@ -67,18 +67,21 @@ func handleConnection(conn net.Conn, directory *string) {
 	}
 }
 
-func parseRequest(lines []string) (string, string, string) {
-	var path, userAgent, encodingFormat string
+func parseRequest(lines []string) (string, string, []string) {
+	var path, userAgent string
+	encodingFormats := []string{}
 	for _, line := range lines {
 		if strings.HasPrefix(line, "GET") || strings.HasPrefix(line, "POST") {
 			path = strings.Fields(line)[1]
 		} else if strings.HasPrefix(line, "User-Agent") {
 			userAgent = strings.SplitN(line, ": ", 2)[1]
 		} else if strings.HasPrefix(line, "Accept-Encoding") {
-			encodingFormat = strings.SplitN(line, ": ", 2)[1]
+
+			encodingFormat := strings.SplitN(line, ": ", 2)[1]
+			encodingFormats = strings.Split(encodingFormat, ", ")
 		}
 	}
-	return path, userAgent, encodingFormat
+	return path, userAgent, encodingFormats
 }
 
 func gzipAndEncode(data string) (string, error) {
@@ -94,17 +97,20 @@ func gzipAndEncode(data string) (string, error) {
 	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
 }
 
-func handleEcho(conn net.Conn, path, encodingFormat string) {
+func handleEcho(conn net.Conn, path string, encodingFormats []string) {
 	keyword := strings.TrimPrefix(path, "/echo/")
 	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(keyword), keyword)
-	if encodingFormat == "gzip" {
-		encodedKeyword, err := gzipAndEncode(keyword)
-		if err != nil {
-			fmt.Printf("Failed to gzip and encode: %v\n", err)
-			sendResponse(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n")
-			return
+	for _, encodingFormat := range encodingFormats {
+		if encodingFormat == "gzip" {
+			encodedKeyword, err := gzipAndEncode(keyword)
+			if err != nil {
+				fmt.Printf("Failed to gzip and encode: %v\n", err)
+				sendResponse(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n")
+				return
+			}
+			msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: %d\r\n\r\n%v", len(encodedKeyword), encodedKeyword)
+			break
 		}
-		msg = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: %d\r\n\r\n%v", len(encodedKeyword), encodedKeyword)
 	}
 	sendResponse(conn, msg)
 }
